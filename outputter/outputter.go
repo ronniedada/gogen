@@ -71,6 +71,9 @@ func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 
 	var lastS *config.Sample
 	var out config.Outputter
+	var duration float64
+	numBytes := make(chan int64, 1)
+
 	for {
 		item, ok := <-oq
 		if !ok {
@@ -83,6 +86,8 @@ func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 			break
 		}
 		out = setup(generator, item, num)
+		startTime := time.Now()
+
 		if len(item.Events) > 0 {
 			go func() {
 				var bytes int64
@@ -131,12 +136,28 @@ func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 					}
 					bytes += int64(getLine("footer", item.S, item.Events[last], item.IO.W))
 				}
+				if item.S.KBps != 0 {
+					numBytes <- bytes
+				}
 				Account(int64(len(item.Events)), bytes)
+
 			}()
+
 			err := out.Send(item)
 			if err != nil {
 				log.Errorf("Error with Send(): %s", err)
 			}
+
+			if item.S.KBps != 0 {
+				expectedDuration := float64(<-numBytes) / 1024.0 / float64(item.S.KBps)
+				duration = time.Since(startTime).Seconds()
+				if expectedDuration > duration {
+					log.Debugf("expectedDuration: %.2f, duration: %.2f, sleep: %.2f",
+						expectedDuration, duration, expectedDuration - duration)
+					time.Sleep(time.Duration((expectedDuration - duration) * 1000) * time.Millisecond)
+				}
+			}
+
 		}
 		lastS = item.S
 	}
