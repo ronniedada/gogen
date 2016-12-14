@@ -1,9 +1,9 @@
 global:
   samplesDir:
-  - /Users/ddallimore/Splunk/runtime/splunk6/splunk/etc/apps/splunk_app_gogen/gogen_assets/samples
+  - $SPLUNK_HOME/etc/apps/splunk_app_gogen/gogen_assets/samples
 generators:
   - name: retailtransaction
-    fileName: /Users/ddallimore/Splunk/runtime/splunk6/splunk/etc/apps/splunk_app_gogen/gogen_assets/generators/retail_transaction.lua
+    fileName: $SPLUNK_HOME/etc/apps/splunk_app_gogen/gogen_assets/generators/retail_transaction.lua
     singleThreaded: false
     options:
       users:
