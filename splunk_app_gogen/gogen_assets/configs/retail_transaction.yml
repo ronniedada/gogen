@@ -44,11 +44,11 @@ samples:
     interval: 1
     endIntervals: 10
     tokens:
-        - name: ts-ymdhmsms-regex
-          format: regex                                                                                                                     
-          token: (\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3})                                                                                                         
-          type: gotimestamp                                                                                                                                          
-          replacement: "2006-01-02 15:04:05.000"
+        - name: ts-dmyhmsms-regex
+          format: regex
+          token: "(\\d{1,2}/\\w{3}/\\d{4}\\s\\d{2}:\\d{2}:\\d{2}:\\d{1,3})"
+          type: timestamp
+          replacement: "%d/%b/%Y %H:%M:%S:%L"
         - name: host
           format: template
           type: fieldChoice
@@ -91,39 +91,39 @@ samples:
       sourcetype: retail_transaction
       source: gogen
       host: $host$
-      _raw: 2012-09-14 16:30:20,072 user=$user$ action=login sessionid=$session$ clientip=$clientip$ useragent=$useragent$
+      _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=login sessionid=$session$ clientip=$clientip$ useragent=$useragent$
     - index: main
       sourcetype: retail_transaction
       source: gogen
       host: $host$
-      _raw: 2012-09-14 16:30:20,072 user=$user$ action=landingpage sessionid=$session$
+      _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=landingpage sessionid=$session$
     - index: main
       sourcetype: retail_transaction
       source: gogen
       host: $host$
-      _raw: 2012-09-14 16:30:20,072 user=$user$ action=searchitem sessionid=$session$
+      _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=searchitem sessionid=$session$
     - index: main
       sourcetype: retail_transaction
       source: gogen
       host: $host$
-      _raw: 2012-09-14 16:30:20,072 user=$user$ action=viewitem sessionid=$session$
+      _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=viewitem sessionid=$session$
     - index: main
       sourcetype: retail_transaction
       source: gogen
       host: $host$
-      _raw: 2012-09-14 16:30:20,072 user=$user$ action=additem sessionid=$session$ itemcode=$itemcode$
+      _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=additem sessionid=$session$ itemcode=$itemcode$
     - index: main
       sourcetype: retail_transaction
       source: gogen
       host: $host$
-      _raw: 2012-09-14 16:30:20,072 user=$user$ action=checkout sessionid=$session$ itemcount=$itemcount$ saleamount=$saleamount$
+      _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=checkout sessionid=$session$ itemcount=$itemcount$ saleamount=$saleamount$
     - index: main
       sourcetype: retail_transaction
       source: gogen
       host: $host$
-      _raw: 2012-09-14 16:30:20,072 user=$user$ action=payment paymentstatus=$paymentstatus$ sessionid=$session$ paymenttype=$paymenttype$
+      _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=payment paymentstatus=$paymentstatus$ sessionid=$session$ paymenttype=$paymenttype$
     - index: main
       sourcetype: retail_transaction
       source: gogen
       host: $host$
-      _raw: 2012-09-14 16:30:20,072 user=$user$ action=logout sessionid=$session$
+      _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=logout sessionid=$session$
