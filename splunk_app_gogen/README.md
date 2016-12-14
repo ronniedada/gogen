@@ -29,6 +29,7 @@ This app is Splunk Modular Input wrapper for streaming GoGen generated events : 
 ## Logging
 
 Standard logging is written to SPLUNK_HOME/var/log/splunk/gogen.log
+
 Any system errors can be searched for : index=_internal error gogen.py
 
 ## Troubleshooting
