@@ -1,5 +1,5 @@
 function countlines(t)
-  count = 0
+  local count = 0
   for k, v in pairs(t) do
     count = count + 1
   end
@@ -7,7 +7,7 @@ function countlines(t)
 end
 
 function countentries(ud)
-  count = 0
+  local count = 0
   for k, v in ud() do
     count = count + 1
   end
@@ -15,7 +15,7 @@ function countentries(ud)
 end
 
 function getline(t, i)
-  count = 0
+  local count = 0
   for k,v in pairsByKeys(t) do
     if count >= i then
       return v
@@ -26,7 +26,7 @@ function getline(t, i)
 end
 
 function getentry(ud, i)
-  count = 0
+  local count = 0
   for k, v in ud() do
     if count >= i then
       return v
@@ -77,20 +77,20 @@ end
 
 function setcountdown()
   -- Countdown a random amount of seconds
-  upper = getudvalue(options["traversaldelay"], tostring(state["stage"]))
-  countdown =  math.random(1, upper)
+  local upper = getudvalue(options["traversaldelay"], tostring(state["stage"]))
+  local countdown =  math.random(1, upper)
   state["countdown"] = countdown
 end
 
 function setmaxtraversalsteps()
-  upper = state["maxtraversalsteps"]
-  max =  math.random(1, upper)
+  local upper = state["maxtraversalsteps"]
+  local max =  math.random(1, upper)
   state["maxtraversalsteps"] = max
 end
 
 function setmaxcartrepeats()
-  upper = state["maxcartrepeats"]
-  max =  math.random(1, upper)
+  local upper = state["maxcartrepeats"]
+  local max =  math.random(1, upper)
   state["maxcartrepeats"] = max
 end
 
@@ -112,8 +112,8 @@ end
 function sessionid()
   -- Generate a unique session id
   math.randomseed(os.time())
-  random = math.random
-  template ='xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
+  local random = math.random
+  local template ='xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
   return string.gsub(template, '[xy]', function (c)
     local v = (c == 'x') and random(0, 0xf) or random(8, 0xb)
     return string.format('%x', v)
@@ -128,7 +128,7 @@ if state["countdown"] == nil or state["countdown"] == 0 then
     setmaxcartrepeats()
     -- Pick a user
     if state["user"] == nil then
-      userline = math.random( 0, countentries(options["users"])-1 )
+      local userline = math.random( 0, countentries(options["users"])-1 )
       debug("userline: "..userline)
       user = getentry(options["users"], userline)
       setToken("user", user)
