@@ -3,8 +3,11 @@ package outputter
 import (
 	"encoding/json"
 	"io"
+	"math"
 	"math/rand"
 	"time"
+	"sync/atomic"
+	"bytes"
 
 	config "github.com/coccyx/gogen/internal"
 	log "github.com/coccyx/gogen/logger"
@@ -64,6 +67,36 @@ func Account(eventsWritten int64, bytesWritten int64) {
 	rotchan <- os
 }
 
+// A hacky way to prepend every* tag to raw event.
+func prependSearchTag(event string, numEvents uint64) string {
+	var buffer bytes.Buffer
+	buffer.WriteString("every1")
+	if math.Mod(float64(numEvents), 10) == 0 {
+		buffer.WriteString(" every10")
+	}
+	if math.Mod(float64(numEvents), 100) == 0 {
+		buffer.WriteString(" every100")
+	}
+	if math.Mod(float64(numEvents), 1000) == 0 {
+		buffer.WriteString(" every1K")
+	}
+	if math.Mod(float64(numEvents), 10000) == 0 {
+		buffer.WriteString(" every10K")
+	}
+	if math.Mod(float64(numEvents), 100000) == 0 {
+		buffer.WriteString(" every100K")
+	}
+	if math.Mod(float64(numEvents), 1000000) == 0 {
+		buffer.WriteString(" every1M")
+	}
+	if math.Mod(float64(numEvents), 10000000) == 0 {
+		buffer.WriteString(" every10M")
+	}
+	buffer.WriteString(" ")
+	buffer.WriteString(event)
+	return buffer.String()
+}
+
 // Start starts an output thread and runs until notified to shut down
 func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 	source := rand.NewSource(time.Now().UnixNano())
@@ -73,6 +106,7 @@ func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 	var out config.Outputter
 	var duration float64
 	numBytes := make(chan int64, 1)
+	var numEvents uint64 = 0
 
 	for {
 		item, ok := <-oq
@@ -100,7 +134,9 @@ func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 						if item.S.Output.Outputter != "devnull" {
 							switch item.S.Output.OutputTemplate {
 							case "raw":
-								tempbytes, err = io.WriteString(item.IO.W, line["_raw"])
+								atomic.AddUint64(&numEvents, 1)
+								line := prependSearchTag(line["_raw"], numEvents)
+								tempbytes, err = io.WriteString(item.IO.W, line)
 								if err != nil {
 									log.Errorf("Error writing to IO Buffer: %s", err)
 								}
