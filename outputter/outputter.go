@@ -71,7 +71,7 @@ func Account(eventsWritten int64, bytesWritten int64) {
 func prependSearchTag(event string, numEvents uint64) string {
 	var buffer bytes.Buffer
 	if math.Mod(float64(numEvents), 10) == 0 {
-		buffer.WriteString(" every10")
+		buffer.WriteString("every10")
 	}
 	if math.Mod(float64(numEvents), 100) == 0 {
 		buffer.WriteString(" every100")
@@ -166,6 +166,8 @@ func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 					// log.Debugf("Out Queue Item %#v", item)
 					var last int
 					for i, line := range item.Events {
+						atomic.AddUint64(&numEvents, 1)
+						line["_raw"] = prependSearchTag(line["_raw"], numEvents)
 						bytes += int64(getLine("row", item.S, line, item.IO.W))
 						last = i
 					}
