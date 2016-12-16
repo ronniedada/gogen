@@ -70,7 +70,6 @@ func Account(eventsWritten int64, bytesWritten int64) {
 // A hacky way to prepend every* tag to raw event.
 func prependSearchTag(event string, numEvents uint64) string {
 	var buffer bytes.Buffer
-	buffer.WriteString("every1")
 	if math.Mod(float64(numEvents), 10) == 0 {
 		buffer.WriteString(" every10")
 	}
@@ -135,8 +134,8 @@ func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 							switch item.S.Output.OutputTemplate {
 							case "raw":
 								atomic.AddUint64(&numEvents, 1)
-								line := prependSearchTag(line["_raw"], numEvents)
-								tempbytes, err = io.WriteString(item.IO.W, line)
+								l := prependSearchTag(line["_raw"], numEvents)
+								tempbytes, err = io.WriteString(item.IO.W, l)
 								if err != nil {
 									log.Errorf("Error writing to IO Buffer: %s", err)
 								}
