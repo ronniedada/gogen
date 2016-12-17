@@ -99,4 +99,6 @@ sendevent(0)
 -- get next co-ordinates
 state["lat"],state["long"],state["distance"] = nextlatlong(state["lat"],state["long"],state["bearing"],state["speed"]*5)
 -- randomly change the bearing for some variability in the path
-state["bearing"] = math.random(0, 360)
+if state["bearing_mode"] == "random" then
+  state["bearing"] = math.random(0, 360)
+end

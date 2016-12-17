@@ -7,6 +7,7 @@ generators:
         start_long_decimal: -122.3932187
         initial_bearing_degrees: 122
         initial_speed_metres_per_sec: 245
+        bearing_mode: random
 samples:
   - name: geopath
     description: Generate a stateful geopath
