@@ -3,11 +3,19 @@ generators:
     fileName: $SPLUNK_HOME/etc/apps/splunk_app_gogen/gogen_assets/generators/geopath.lua
     singleThreaded: false
     init:
+        # 250 Brannan St
         start_lat_decimal: 37.7830564
         start_long_decimal: -122.3932187
         initial_bearing_degrees: 122
-        initial_speed_metres_per_sec: 245
+        # as a guide , walk speed 1.5 ,driving speed 30, airplane speed 245
+        initial_speed_metres_per_sec: 30
+        # random (0,360) | straight
         bearing_mode: random
+        # only applied when in random mode
+        box_containment_top_lat: 37.784
+        box_containment_bottom_lat: 37.782
+        box_containment_left_long: -122.392
+        box_containment_right_long: -122.394
 samples:
   - name: geopath
     description: Generate a stateful geopath

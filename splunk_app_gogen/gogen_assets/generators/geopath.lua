@@ -98,7 +98,34 @@ sendevent(0)
 
 -- get next co-ordinates
 state["lat"],state["long"],state["distance"] = nextlatlong(state["lat"],state["long"],state["bearing"],state["speed"]*5)
+
 -- randomly change the bearing for some variability in the path
 if state["bearing_mode"] == "random" then
-  state["bearing"] = math.random(0, 360)
+
+  -- check if we need to apply containment logic
+  if(state["box_containment_top_lat"] ~= nil and state["box_containment_bottom_lat"] ~= nil and state["box_containment_left_long"] ~= nil and state["box_containment_right_long"] ~= nil) then
+    -- are we still in the containment box
+
+    if(state["lat"] < state["box_containment_top_lat"] and state["lat"] > state["box_containment_bottom_lat"] and state["long"] < state["box_containment_left_long"] and state["long"] > state["box_containment_right_long"]) then
+      state["bearing"] = math.random(0, 360)
+      debug("contained")
+    else
+      -- dog left the yard , relect the path to the back bearing
+      if(state["bearing"] >= 180) then
+        state["bearing"] = state["bearing"] - 180
+      else
+        state["bearing"] = state["bearing"] + 180
+      end
+      -- get next co-ordinates
+      state["lat"],state["long"],state["distance"] = nextlatlong(state["lat"],state["long"],state["bearing"],state["speed"]*5)
+      debug("dog left the yard")
+      state["bearing"] = math.random(0, 360)
+    end  
+  else
+    debug("no containment logic")
+    state["bearing"] = math.random(0, 360) 
+  end  
+end
+if state["bearing_mode"] == "straight" then
+  -- no need to do anything
 end
