@@ -30,7 +30,7 @@ generators:
         stage: 0
         cartitemcount: 0
         traversalsteps: 0
-        maxtraversalsteps: 40
+        maxtraversalsteps: 100
         cartrepeats: 0
         maxcartrepeats: 5
         sessionid: 0
@@ -71,9 +71,9 @@ samples:
           lower: 1.0
           upper: 4000.0
         - name: itemcode
-          format: template
           type: choice
           sample: itemcode.sample
+          disabled: true
         - name: paymenttype
           format: template
           type: choice
@@ -127,3 +127,8 @@ samples:
       source: gogen
       host: $host$
       _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=logout sessionid=$session$
+    - index: main
+      sourcetype: retail_transaction
+      source: gogen
+      host: $host$
+      _raw: 29/Apr/2013 18:09:05:132 user=$user$ action=removeitem sessionid=$session$ itemcode=$itemcode$
