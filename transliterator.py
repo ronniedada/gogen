@@ -1200,8 +1200,8 @@ if __name__ == '__main__':
 
         fname = s.name+'.yml'
         mix['mix'].append({'sample': fname })
-        f = open(fname, 'w')
-        f.write(yaml.dump(localexport))
+        f = open(fname, 'wb')
+        f.write(yaml.dump(localexport, default_flow_style=False))
         f.close()
     
     basedir = args.configfile
@@ -1209,6 +1209,6 @@ if __name__ == '__main__':
         basedir = os.path.dirname(args.configfile)
     basedir = os.path.abspath(basedir)
     appname = os.path.split(basedir)[-1]
-    f = open(appname+'.yml', 'w')
-    f.write(yaml.dump(mix))
+    f = open(appname+'.yml', 'wb')
+    f.write(yaml.dump(mix, default_flow_style=False))
     f.close()

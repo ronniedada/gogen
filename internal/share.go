@@ -274,9 +274,10 @@ func PullFile(gogen string, filename string) {
 			log.Debugf("Reading config from cache file '%s'", cacheFile)
 			readFrom, err = os.Open(cacheFile)
 			if err != nil {
-				log.Fatalf("Couldn't open cache file %s: %s", cacheFile, err)
+				cached = false
+			} else {
+				cached = true
 			}
-			cached = true
 		} else {
 			log.Debugf("Version mismatch, Gogen version %d cached version %d", g.Version, version)
 		}
