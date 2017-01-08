@@ -11,10 +11,10 @@ import (
 	config "github.com/coccyx/gogen/internal"
 	log "github.com/coccyx/gogen/logger"
 	"github.com/coccyx/gogen/run"
-	"github.com/ghodss/yaml"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/profile"
 	"gopkg.in/urfave/cli.v1"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var c *config.Config

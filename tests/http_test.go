@@ -16,9 +16,11 @@ func TestHTTPOutput(t *testing.T) {
 	home := ".."
 	os.Setenv("GOGEN_FULLCONFIG", filepath.Join(home, "tests", "httpoutput", "httpoutput.yml"))
 	c := config.NewConfig()
-	// s := c.FindSampleByName("backfill")
-	run.Run(c)
-	// open.Run(c.Global.Output.Endpoints[0] + "?inspect")
+	if len(c.Samples) > 0 {
+		// s := c.FindSampleByName("backfill")
+		run.Run(c)
+		// open.Run(c.Global.Output.Endpoints[0] + "?inspect")
+	}
 
 	os.Setenv("GOGEN_FULLCONFIG", filepath.Join(home, "tests", "httpoutput", "splunkoutput.yml"))
 	c = config.NewConfig()

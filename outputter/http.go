@@ -19,7 +19,6 @@ type httpout struct {
 	resp        *http.Response
 	initialized bool
 	closed      bool
-	lastS       *config.Sample
 	sent        int64
 	done        chan int
 }
@@ -47,7 +46,6 @@ func (h *httpout) Send(item *config.OutQueueItem) error {
 		h.newPost(item)
 		h.sent = 0
 	}
-	h.lastS = item.S
 	return nil
 }
 

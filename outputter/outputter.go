@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/coccyx/go-s2s/s2s"
 	config "github.com/coccyx/gogen/internal"
 	log "github.com/coccyx/gogen/logger"
 	"github.com/coccyx/gogen/template"
@@ -109,7 +110,7 @@ func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 									log.Errorf("Error writing to IO Buffer: %s", err)
 								}
 							case "splunktcp":
-								tempbytes, err = item.IO.W.Write(encodeEvent(line))
+								tempbytes, err = item.IO.W.Write(s2s.EncodeEvent(line).Bytes())
 								if err != nil {
 									log.Errorf("Error writing to IO Buffer: %s", err)
 								}

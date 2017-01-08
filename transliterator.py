@@ -13,6 +13,7 @@ import urllib
 import types
 import random
 import csv
+import yaml
 
 # 6/7/14 CS   Adding a new logger adapter class which we will use to override the formatting
 #             for all messsages to include the sample they came from
@@ -1056,6 +1057,8 @@ if __name__ == '__main__':
     export['raters'] = []
 
 
+    mix = { }
+    mix['mix'] = [ ]
     for s in c.samples:
         localexport = copy.deepcopy(export)
         news = { }
@@ -1075,14 +1078,21 @@ if __name__ == '__main__':
             rater['type'] = 'config'
             rater['options'] = { }   
             if s.hourOfDayRate != None:
-                rater['options']['HourOfDay'] = s.hourOfDayRate
+                rater['options']['HourOfDay'] = { }
+                for k, v in s.hourOfDayRate.iteritems():
+                    rater['options']['HourOfDay'][int(k)] = float(v)
             if s.minuteOfHourRate != None:
-                rater['options']['MinuteOfHour'] = s.minuteOfHourRate
+                rater['options']['MinuteOfHour'] = { }
+                for k, v in s.minuteOfHourRate.iteritems():
+                    rater['options']['MinuteOfHour'][int(k)] = float(v)
             if s.dayOfWeekRate != None:
-                rater['options']['DayOfWeek'] = s.dayOfWeekRate
+                rater['options']['DayOfWeek'] = { }
+                for k, v in s.dayOfWeekRate.iteritems():
+                    rater['options']['DayOfWeek'][int(k)] = float(v)
             localexport['raters'].append(rater)
         for l in s.sampleDict:
             newline = { }
+            logger.debug("sample: %s line: %s" % (s.name, l))
             for k, v in l.items():
                 newline[k] = v.rstrip()
             news['lines'].append(newline)
@@ -1102,12 +1112,19 @@ if __name__ == '__main__':
                 token['replacement'] = s.tokens[i].replacement
             elif s.tokens[i].replacementType == 'file' or s.tokens[i].replacementType == 'mvfile':
                 if s.tokens[i].replacement.find(':') > 0:
-                    fname, col = s.tokens[i].replacement.split(':')
+                    toks = s.tokens[i].replacement.split(':')
+                    if toks[-1].isdigit():
+                        col = toks[-1]
+                        fname = ':'.join(toks[:-1])
+                    else:
+                        fname = s.tokens[i].replacement
+                        col = 0
                 else:
                     fname = s.tokens[i].replacement
                     col = 0
                 token['name'] = os.path.basename(fname)
                 token['sample'] = os.path.basename(fname)
+                logger.debug("Opening token file %s, orig: %s" % (fname, s.tokens[i].replacement))
                 f = open(os.path.expandvars(fname), 'rU')
                 if col > 0:
                     token['type'] = 'fieldChoice'
@@ -1181,6 +1198,17 @@ if __name__ == '__main__':
             localexport['global']['output']['maxBytes'] = s.fileMaxBytes
         localexport['samples'].append(news)
 
-        f = open(s.name+'.json', 'w')
-        f.write(json.dumps(localexport, indent=2))
+        fname = s.name+'.yml'
+        mix['mix'].append({'sample': fname })
+        f = open(fname, 'w')
+        f.write(yaml.dump(localexport))
         f.close()
+    
+    basedir = args.configfile
+    if not os.path.isdir(args.configfile):
+        basedir = os.path.dirname(args.configfile)
+    basedir = os.path.abspath(basedir)
+    appname = os.path.split(basedir)[-1]
+    f = open(appname+'.yml', 'w')
+    f.write(yaml.dump(mix))
+    f.close()
