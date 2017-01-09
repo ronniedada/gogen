@@ -81,11 +81,17 @@ func (h *httpout) newPost(item *config.OutQueueItem) {
 	h.done = make(chan int)
 	go func() {
 		h.resp, err = client.Do(req)
-		if err != nil {
+		if err != nil && h.resp == nil {
 			log.Errorf("Error making request from sample '%s' to endpoint '%s': %s", item.S.Name, endpoint, err)
-		} else if h.resp.StatusCode != 200 {
-			body, _ := ioutil.ReadAll(h.resp.Body)
-			log.Errorf("Error making request from sample '%s' to endpoint '%s', status '%d': %s", item.S.Name, endpoint, h.resp.StatusCode, body)
+		} else {
+			defer h.resp.Body.Close()
+
+			body, err := ioutil.ReadAll(h.resp.Body)
+			if err != nil {
+				log.Errorf("Error making request from sample '%s' to endpoint '%s': %s", item.S.Name, endpoint, err)
+			} else if h.resp.StatusCode != 200 {
+				log.Errorf("Error making request from sample '%s' to endpoint '%s', status '%d': %s", item.S.Name, endpoint, h.resp.StatusCode, body)
+			}
 		}
 		h.done <- 1
 	}()
