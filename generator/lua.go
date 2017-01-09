@@ -206,6 +206,20 @@ func (lg *luagen) setToken(L *lua.LState) int {
 	return 0
 }
 
+func (lg *luagen) setTime(L *lua.LState) int {
+	item := lg.currentItem
+
+	luaTime := float64(L.ToNumber(1))
+	if luaTime <= 0 {
+		L.ArgError(1, "expecting time in a floating point value since epoch in seconds.nanoseconds format")
+	}
+	t := time.Unix(int64(math.Floor(luaTime)), int64(math.Mod(luaTime, 1))*int64(time.Nanosecond))
+	item.Earliest = t
+	item.Latest = t
+	item.Now = t
+	return 0
+}
+
 func (lg *luagen) replaceTokens(L *lua.LState) int {
 	item := lg.currentItem
 
@@ -284,9 +298,9 @@ func (lg *luagen) Gen(item *config.GenQueueItem) error {
 				L.SetGlobal("options", luar.New(L, s.CustomGenerator.Options))
 				L.SetGlobal("lines", gs.LuaLines)
 				L.SetGlobal("count", luar.New(L, item.Count))
-				L.SetGlobal("earliest", luar.New(L, item.Earliest))
-				L.SetGlobal("latest", luar.New(L, item.Latest))
-				L.SetGlobal("now", luar.New(L, item.Now))
+				L.SetGlobal("earliest", lua.LNumber(float64(item.Earliest.UnixNano())/float64(time.Second)))
+				L.SetGlobal("latest", lua.LNumber(float64(item.Latest.UnixNano())/float64(time.Second)))
+				L.SetGlobal("now", lua.LNumber(float64(item.Now.UnixNano())/float64(time.Second)))
 
 				// Register functions
 				L.SetGlobal("sleep", L.NewFunction(sleep))
@@ -299,6 +313,7 @@ func (lg *luagen) Gen(item *config.GenQueueItem) error {
 				L.SetGlobal("getLines", L.NewFunction(lg.getLines))
 				L.SetGlobal("getChoice", L.NewFunction(lg.getChoice))
 				L.SetGlobal("getFieldChoice", L.NewFunction(lg.getFieldChoice))
+				L.SetGlobal("setTime", L.NewFunction(lg.setTime))
 				return L
 			},
 		}
@@ -309,9 +324,9 @@ func (lg *luagen) Gen(item *config.GenQueueItem) error {
 	L.SetGlobal("options", luar.New(L, s.CustomGenerator.Options))
 	L.SetGlobal("lines", gs.LuaLines)
 	L.SetGlobal("count", luar.New(L, item.Count))
-	L.SetGlobal("earliest", luar.New(L, item.Earliest))
-	L.SetGlobal("latest", luar.New(L, item.Latest))
-	L.SetGlobal("now", luar.New(L, item.Now))
+	L.SetGlobal("earliest", lua.LNumber(float64(item.Earliest.UnixNano())/float64(time.Second)))
+	L.SetGlobal("latest", lua.LNumber(float64(item.Latest.UnixNano())/float64(time.Second)))
+	L.SetGlobal("now", lua.LNumber(float64(item.Now.UnixNano())/float64(time.Second)))
 	// L := lua.NewState()
 	// defer L.Close()
 

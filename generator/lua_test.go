@@ -174,6 +174,20 @@ func TestReplaceTokens(t *testing.T) {
 	testLuaGen(t, s, gen, "foo")
 }
 
+func TestSetTime(t *testing.T) {
+	config.ResetConfig()
+
+	os.Setenv("GOGEN_HOME", "..")
+	os.Setenv("GOGEN_ALWAYS_REFRESH", "")
+	home := ".."
+	os.Setenv("GOGEN_FULLCONFIG", filepath.Join(home, "tests", "generator", "luaapi.yml"))
+
+	c := config.NewConfig()
+	s := c.FindSampleByName("setTime")
+	gen := new(luagen)
+	testLuaGen(t, s, gen, "2001-10-20 11:59:59.000000")
+}
+
 func testLuaGen(t *testing.T, s *config.Sample, gen *luagen, expected string) {
 	oq, err := runLuaGen(t, s, gen)
 	timeout := make(chan bool, 1)

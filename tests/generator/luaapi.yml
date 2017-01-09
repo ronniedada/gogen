@@ -26,6 +26,15 @@ generators:
         events = { }
         table.insert(events, line)
         send(events)
+  - name: setTime
+    script: |
+        line = getLine(0)
+        t = now-1
+        setTime(t)
+        line = replaceTokens(line)
+        events = { }
+        table.insert(events, line)
+        send(events)
 samples:
   - name: setToken
     generator: setToken
@@ -85,4 +94,15 @@ samples:
     lines:
     - _raw: $static$
       index: foo
+  - name: setTime
+    generator: setTime
+    interval: 1
+    endIntervals: 1
+    lines:
+    - _raw: $time$
+    tokens:
+    - name: time
+      type: timestamp
+      format: template
+      replacement: '%Y-%m-%d %H:%M:%S.%f'
       

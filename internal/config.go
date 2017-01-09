@@ -1089,17 +1089,17 @@ func (c *Config) parseFileConfig(out interface{}, path ...string) error {
 	case ".yml", ".yaml":
 		if err := yaml.Unmarshal(contents, out); err != nil {
 			if ute, ok := err.(*json.UnmarshalTypeError); ok {
-				log.Panicf("JSON parsing error in file '%s' at offset %d: %v", fullPath, ute.Offset, ute)
+				log.Errorf("JSON parsing error in file '%s' at offset %d: %v", fullPath, ute.Offset, ute)
 			} else {
-				log.Panicf("YAML parsing error in file '%s': %v", fullPath, err)
+				log.Errorf("YAML parsing error in file '%s': %v", fullPath, err)
 			}
 		}
 	case ".json":
 		if err := json.Unmarshal(contents, out); err != nil {
 			if ute, ok := err.(*json.UnmarshalTypeError); ok {
-				log.Panicf("JSON parsing error in file '%s' at offset %d: %v", fullPath, ute.Offset, ute)
+				log.Errorf("JSON parsing error in file '%s' at offset %d: %v", fullPath, ute.Offset, ute)
 			} else {
-				log.Panicf("JSON parsing error in file '%s': %v", fullPath, err)
+				log.Errorf("JSON parsing error in file '%s': %v", fullPath, err)
 			}
 		}
 	}
