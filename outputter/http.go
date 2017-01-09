@@ -83,8 +83,6 @@ func (h *httpout) newPost(item *config.OutQueueItem) {
 		h.resp, err = client.Do(req)
 		if err != nil {
 			log.Errorf("Error making request from sample '%s' to endpoint '%s': %s", item.S.Name, endpoint, err)
-			h.Close()
-			h.initialized = false
 		} else if h.resp.StatusCode != 200 {
 			body, _ := ioutil.ReadAll(h.resp.Body)
 			log.Errorf("Error making request from sample '%s' to endpoint '%s', status '%d': %s", item.S.Name, endpoint, h.resp.StatusCode, body)
