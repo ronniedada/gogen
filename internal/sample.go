@@ -106,7 +106,7 @@ type Token struct {
 	Script         string              `json:"script,omitempty" yaml:"script,omitempty"`
 	Init           map[string]string   `json:"init,omitempty" yaml:"init,omitempty"`
 	RaterString    string              `json:"rater,omitempty" yaml:"rater,omitempty"`
-	Disabled       bool                `json:"disabled,omitempty" yaml:"omitempty"`
+	Disabled       bool                `json:"disabled,omitempty" yaml:"disabled,omitempty"`
 	Rater          Rater               `json:"-" yaml:"-"`
 
 	L                          *lua.LState `json:"-" yaml:"-"`
@@ -281,29 +281,37 @@ func (t Token) GenReplacement(choice int, et time.Time, lt time.Time, now time.T
 	case "choice":
 		if choice == -1 {
 			choice = randgen.Intn(len(t.Choice))
+		} else if choice < 0 || choice > len(t.Choice) {
+			return "", -1, fmt.Errorf("Choice out of range")
 		}
 		return t.Choice[choice], choice, nil
 	case "weightedChoice":
-		// From http://eli.thegreenplace.net/2010/01/22/weighted-random-generation-in-python/
-		if t.weightedChoiceTotals == nil {
-			t.weightedChoiceTotals = make([]int, len(t.WeightedChoice))
-			for i, w := range t.WeightedChoice {
-				t.weightedChoiceRunningTotal += w.Weight
-				t.weightedChoiceTotals[i] = t.weightedChoiceRunningTotal
+		if choice == -1 {
+			// From http://eli.thegreenplace.net/2010/01/22/weighted-random-generation-in-python/
+			if t.weightedChoiceTotals == nil {
+				t.weightedChoiceTotals = make([]int, len(t.WeightedChoice))
+				for i, w := range t.WeightedChoice {
+					t.weightedChoiceRunningTotal += w.Weight
+					t.weightedChoiceTotals[i] = t.weightedChoiceRunningTotal
+				}
 			}
-		}
 
-		r := randgen.Float64() * float64(t.weightedChoiceRunningTotal)
-		for j, total := range t.weightedChoiceTotals {
-			if r < float64(total) {
-				choice = j
-				break
+			r := randgen.Float64() * float64(t.weightedChoiceRunningTotal)
+			for j, total := range t.weightedChoiceTotals {
+				if r < float64(total) {
+					choice = j
+					break
+				}
 			}
+		} else if choice < 0 || choice > len(t.WeightedChoice) {
+			return "", -1, fmt.Errorf("Choice out of range")
 		}
 		return t.WeightedChoice[choice].Choice, choice, nil
 	case "fieldChoice":
 		if choice == -1 {
 			choice = randgen.Intn(len(t.FieldChoice))
+		} else if choice < 0 || choice > len(t.FieldChoice) {
+			return "", -1, fmt.Errorf("Choice out of range")
 		}
 		return t.FieldChoice[choice][t.SrcField], choice, nil
 	case "script":

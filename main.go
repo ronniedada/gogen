@@ -44,6 +44,12 @@ func Setup(clic *cli.Context) {
 		log.SetInfo()
 	}
 
+	if len(clic.String("configDir")) > 0 {
+		os.Setenv("GOGEN_CONFIG_DIR", clic.String("configDir"))
+	}
+	if len(clic.String("samplesDir")) > 0 {
+		os.Setenv("GOGEN_SAMPLES_DIR", clic.String("samplesDir"))
+	}
 	if len(clic.String("config")) > 0 {
 		cstr := clic.String("config")
 		if cstr[0:4] == "http" || cstr[len(cstr)-3:] == "yml" || cstr[len(cstr)-4:] == "yaml" || cstr[len(cstr)-4:] == "json" {
@@ -53,10 +59,6 @@ func Setup(clic *cli.Context) {
 			config.ResetConfig()
 			os.Setenv("GOGEN_FULLCONFIG", ".config.yml")
 		}
-	} else if len(clic.String("configDir")) > 0 {
-		os.Setenv("GOGEN_CONFIG_DIR", clic.String("configDir"))
-	} else if len(clic.String("samplesDir")) > 0 {
-		os.Setenv("GOGEN_SAMPLES_DIR", clic.String("samplesDir"))
 	}
 
 	c = config.NewConfig()
@@ -91,10 +93,12 @@ func Setup(clic *cli.Context) {
 			c.Samples[i].Output.Headers["Authorization"] = "Splunk " + clic.String("splunkHECToken")
 		}
 		if len(clic.String("outputTemplate")) > 0 {
-			log.Infof("Setting outputTempalte to '%s'", clic.String("outputTemplate"))
+			log.Infof("Setting outputTemplate to '%s'", clic.String("outputTemplate"))
 			c.Samples[i].Output.OutputTemplate = clic.String("outputTemplate")
 		}
 	}
+
+	c.SetupSplunk()
 
 	// log.Debugf("Global: %#v", c.Global)
 	// log.Debugf("Default Tokens: %#v", c.DefaultTokens)
@@ -242,8 +246,8 @@ func main() {
 				},
 			},
 			Action: func(clic *cli.Context) error {
-				os.Setenv("GOGEN_ALWAYS_REFRESH", "1")
 				if !clic.Bool("noexport") {
+					os.Setenv("GOGEN_ALWAYS_REFRESH", "1")
 					os.Setenv("GOGEN_EXPORT", "1")
 				}
 				c = config.NewConfig()

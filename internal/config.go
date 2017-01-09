@@ -166,7 +166,8 @@ func BuildConfig(cc ConfigConfig) *Config {
 			if err := c.parseFileConfig(&c, cc.FullConfig); err != nil {
 				log.Panic(err)
 			}
-			if filepath.Dir(cc.FullConfig) != "." && !strings.Contains(cc.FullConfig, "tests") {
+			// if filepath.Dir(cc.FullConfig) != "." && !strings.Contains(cc.FullConfig, "tests") {
+			if !strings.Contains(cc.FullConfig, "tests") {
 				c.Global.SamplesDir = append(c.Global.SamplesDir, filepath.Dir(cc.FullConfig))
 			}
 		}
@@ -357,6 +358,9 @@ func BuildConfig(cc ConfigConfig) *Config {
 		}
 	}
 
+	// Setup time for HEC and splunktcp
+	c.SetupSplunk()
+
 	// There area references from tokens to samples, need to resolve those references
 	for i := 0; i < len(c.Samples); i++ {
 		c.validate(c.Samples[i])
@@ -427,6 +431,7 @@ func (c *Config) readSamplesDir(samplesDir string) {
 	// Read all flat file samples
 	acceptableExtensions := map[string]bool{".sample": true}
 	c.walkPath(samplesDir, acceptableExtensions, func(innerPath string) error {
+		log.Debugf("Loading file sample '%s'", innerPath)
 		s := new(Sample)
 		s.Name = filepath.Base(innerPath)
 		s.Disabled = true
@@ -449,6 +454,7 @@ func (c *Config) readSamplesDir(samplesDir string) {
 	// Read all csv file samples
 	acceptableExtensions = map[string]bool{".csv": true}
 	c.walkPath(samplesDir, acceptableExtensions, func(innerPath string) error {
+		log.Debugf("Loading CSV sample '%s'", innerPath)
 		s := new(Sample)
 		s.Name = filepath.Base(innerPath)
 		s.Disabled = true
@@ -489,14 +495,18 @@ func (c *Config) readSamplesDir(samplesDir string) {
 	// Read all YAML & JSON samples in $GOGEN_HOME/config/samples directory
 	acceptableExtensions = map[string]bool{".yml": true, ".yaml": true, ".json": true}
 	c.walkPath(samplesDir, acceptableExtensions, func(innerPath string) error {
-		s := Sample{}
-		if err := c.parseFileConfig(&s, innerPath); err != nil {
-			log.Errorf("Error parsing config %s: %s", innerPath, err)
+		if c.cc.FullConfig != innerPath {
+			log.Debugf("Loading YAML sample '%s'", innerPath)
+			s := Sample{}
+			if err := c.parseFileConfig(&s, innerPath); err != nil {
+				log.Errorf("Error parsing config %s: %s", innerPath, err)
+				return nil
+			}
+			s.realSample = true
+
+			c.Samples = append(c.Samples, &s)
 			return nil
 		}
-		s.realSample = true
-
-		c.Samples = append(c.Samples, &s)
 		return nil
 	})
 }
@@ -598,7 +608,21 @@ func (c *Config) validate(s *Sample) {
 						}
 					}
 					if otherfield {
-						s.Tokens[i].FieldChoice = c.Samples[j].Lines
+						// If we're a structured sample and we contain the field "_weight", then we create a weighted choice struct
+						// Otherwise we're a fieldChoice
+						_, ok := c.Samples[j].Lines[0]["_weight"]
+						_, ok2 := c.Samples[j].Lines[0][s.Tokens[i].SrcField]
+						if ok && ok2 {
+							for _, line := range c.Samples[j].Lines {
+								weight, err := strconv.Atoi(line["_weight"])
+								if err != nil {
+									weight = 0
+								}
+								s.Tokens[i].WeightedChoice = append(s.Tokens[i].WeightedChoice, WeightedChoice{Weight: weight, Choice: line[s.Tokens[i].SrcField]})
+							}
+						} else {
+							s.Tokens[i].FieldChoice = c.Samples[j].Lines
+						}
 					} else {
 						// s.Tokens[i].WeightedChoice = c.Samples[j].Lines
 						temp := make([]string, 0, len(c.Samples[j].Lines))
@@ -612,42 +636,6 @@ func (c *Config) validate(s *Sample) {
 						s.Tokens[i].Choice = temp
 					}
 					break
-				}
-			}
-		}
-
-		if !c.cc.Export && c.Global.Output.OutputTemplate == "splunkhec" {
-			// If there's no _time token, add it to make sure we have a timestamp field in every event
-			// This is primarily used for Splunk's HTTP Event Collectot
-			timetoken := false
-			for _, t := range s.Tokens {
-				if t.Name == "_time" {
-					timetoken = true
-				}
-			}
-			for _, l := range s.Lines {
-				if _, ok := l["_time"]; ok {
-					timetoken = true
-				}
-			}
-			if !timetoken {
-				for i := 0; i < len(s.Lines); i++ {
-					s.Lines[i]["_time"] = "$_time$"
-				}
-				tt := Token{
-					Name:   "_time",
-					Type:   "epochtimestamp",
-					Format: "template",
-					Field:  "_time",
-					Token:  "$_time$",
-					Group:  -1,
-				}
-				s.Tokens = append(s.Tokens, tt)
-			}
-			// Fixup existing timestamp tokens to all use the same static group, 999999
-			for i := 0; i < len(s.Tokens); i++ {
-				if s.Tokens[i].Type == "timestamp" || s.Tokens[i].Type == "gotimestamp" || s.Tokens[i].Type == "epochtimestamp" {
-					s.Tokens[i].Group = -1
 				}
 			}
 		}
@@ -736,7 +724,7 @@ func (c *Config) validate(s *Sample) {
 					var err error
 					pos1, pos2, err := t.GetReplacementOffsets(l[t.Field])
 					if err != nil {
-						log.Infof("Error getting replacements for token '%s' in event '%s', disabling SinglePass", t.Token, l[t.Field])
+						log.Infof("Error getting replacements for token '%s' in event '%s', disabling SinglePass", t.Name, l[t.Field])
 						s.SinglePass = false
 						break outer
 					}
@@ -992,28 +980,95 @@ func ParseBeginEnd(s *Sample) {
 	log.Infof("Beginning generation at %s; Ending at %s; Realtime: %v", s.BeginParsed, s.EndParsed, s.Realtime)
 }
 
+// SetupSplunk adds a time token if we're outputting to SplunkTime
+func (c *Config) SetupSplunk() {
+	if !c.cc.Export && c.Global.Output.OutputTemplate == "splunkhec" {
+		log.Infof("Adding _time field for Splunk")
+		for i := 0; i < len(c.Samples); i++ {
+			s := c.Samples[i]
+
+			// If there's no _time token, add it to make sure we have a timestamp field in every event
+			// This is primarily used for Splunk's HTTP Event Collectot
+			timetoken := false
+			for _, t := range s.Tokens {
+				if t.Name == "_time" {
+					timetoken = true
+				}
+			}
+			for _, l := range s.Lines {
+				if _, ok := l["_time"]; ok {
+					timetoken = true
+				}
+			}
+			if !timetoken {
+				tt := Token{
+					Name:   "_time",
+					Type:   "epochtimestamp",
+					Format: "template",
+					Field:  "_time",
+					Token:  "$_time$",
+					Group:  -1,
+				}
+				s.Tokens = append(s.Tokens, tt)
+				if s.SinglePass {
+					for j := 0; j < len(s.BrokenLines); j++ {
+						st := []StringOrToken{
+							StringOrToken{T: &tt, S: ""},
+						}
+						s.BrokenLines[j]["_time"] = st
+					}
+				}
+				for j := 0; j < len(s.Lines); j++ {
+					s.Lines[j]["_time"] = "$_time$"
+				}
+			}
+			// Fixup existing timestamp tokens to all use the same static group, -1
+			for j := 0; j < len(s.Tokens); j++ {
+				if s.Tokens[j].Type == "timestamp" || s.Tokens[j].Type == "gotimestamp" || s.Tokens[j].Type == "epochtimestamp" {
+					s.Tokens[j].Group = -1
+				}
+			}
+		}
+	}
+}
+
 func (c *Config) walkPath(fullPath string, acceptableExtensions map[string]bool, callback func(string) error) error {
-	// info, err := os.Stat(fullPath)
-	// if err != nil {
-	// 	return err
-	// }
-	// if info.IsDir() {
-	// 	fullPath += string(filepath.Separator)
-	// }
-	filepath.Walk(os.ExpandEnv(fullPath), func(path string, _ os.FileInfo, err error) error {
-		log.Debugf("Walking, at %s", path)
-		if os.IsNotExist(err) {
-			return nil
-		} else if err != nil {
-			log.Errorf("Error from WalkFunc: %s", err)
-			return err
-		}
-		// Check if extension is acceptable before attempting to parse
+	log.Debugf("walkPath '%s' for extensions: '%v'", fullPath, acceptableExtensions)
+	fullPath = os.ExpandEnv(fullPath)
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		fullPath += string(filepath.Separator)
+	}
+	// filepath.Walk(os.ExpandEnv(fullPath), func(path string, _ os.FileInfo, err error) error {
+	// 	log.Debugf("Walking, at %s", path)
+	// 	if os.IsNotExist(err) {
+	// 		return nil
+	// 	} else if err != nil {
+	// 		log.Errorf("Error from WalkFunc: %s", err)
+	// 		return err
+	// 	}
+	// 	// Check if extension is acceptable before attempting to parse
+	// 	if acceptableExtensions[filepath.Ext(path)] {
+	// 		return callback(path)
+	// 	}
+	// 	return nil
+	// })
+	files, err := filepath.Glob(fullPath + "*")
+	if err != nil {
+		return err
+	}
+	for _, path := range files {
+		// log.Debugf("Walking, at %s", path)
 		if acceptableExtensions[filepath.Ext(path)] {
-			return callback(path)
+			err := callback(path)
+			if err != nil {
+				return err
+			}
 		}
-		return nil
-	})
+	}
 	return nil
 }
 
