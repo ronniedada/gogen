@@ -2,12 +2,15 @@
 Copyright (C) 2005-2016 Splunk Inc. All Rights Reserved.
 '''
 from __future__ import division
-import sys, os
+import sys
+import os
 import xml.dom.minidom
 import subprocess
-import logging, logging.handlers
+import logging
+import logging.handlers
 import platform
 import urllib
+
 
 def setupLogger(logger=None, log_format='%(asctime)s %(levelname)s [Gogen] %(message)s', level=logging.INFO, log_name="gogen.log", logger_name="gogen"):
     """
@@ -16,10 +19,12 @@ def setupLogger(logger=None, log_format='%(asctime)s %(levelname)s [Gogen] %(mes
     if logger is None:
         logger = logging.getLogger(logger_name)
 
-    logger.propagate = False # Prevent the log messages from being duplicated in the python.log file
+    # Prevent the log messages from being duplicated in the python.log file
+    logger.propagate = False
     logger.setLevel(level)
 
-    file_handler = logging.handlers.RotatingFileHandler(os.path.join(os.environ['SPLUNK_HOME'], 'var', 'log', 'splunk', log_name), maxBytes=2500000, backupCount=5)
+    file_handler = logging.handlers.RotatingFileHandler(os.path.join(
+        os.environ['SPLUNK_HOME'], 'var', 'log', 'splunk', log_name), maxBytes=2500000, backupCount=5)
     formatter = logging.Formatter(log_format)
     file_handler.setFormatter(formatter)
 
@@ -44,15 +49,15 @@ SCHEME = """<scheme>
                 
             <arg name="config_type">
                 <title>Configuration Descriptor Type</title>
-                <description>The type of config defined in the config field , local_file / short_path / full_file_path / url</description>
-                <required_on_edit>true</required_on_edit>
-                <required_on_create>true</required_on_create>
+                <description>The type of config defined in the Configuration Descriptor field.  Defaults to config_dir.</description>
+                <required_on_edit>false</required_on_edit>
+                <required_on_create>false</required_on_create>
             </arg>   
             <arg name="config">
                 <title>Configuration Descriptor</title>
-                <description>Short Gogen path (coccyx/weblog for example), full file path,local file in config directory, or URL pointing to YAML or JSON config</description>
-                <required_on_edit>true</required_on_edit>
-                <required_on_create>true</required_on_create>
+                <description>Short Gogen path (coccyx/weblog for example), full file path,local file in config directory, or URL pointing to YAML or JSON config.  Leave blank to use all configs in gogen_assets.</description>
+                <required_on_edit>false</required_on_edit>
+                <required_on_create>false</required_on_create>
             </arg>
             
             <arg name="count">
@@ -97,15 +102,18 @@ SCHEME = """<scheme>
 </scheme>
 """
 
+
 def do_validate():
-    config = get_validation_config() 
-    #TODO
-    #if error , print_validation_error & sys.exit(2) 
+    config = get_validation_config()
+    # TODO
+    # if error , print_validation_error & sys.exit(2)
 
 # prints validation error data to be consumed by Splunk
+
+
 def print_validation_error(s):
     print "<error><message>%s</message></error>" % encodeXMLText(s)
-    
+
 
 def encodeXMLText(text):
     text = text.replace("&", "&amp;")
@@ -115,10 +123,12 @@ def encodeXMLText(text):
     text = text.replace(">", "&gt;")
     return text
 
+
 def usage():
     print "usage: %s [--scheme|--validate-arguments]"
     logger.error("Incorrect Program Usage")
     sys.exit(2)
+
 
 def do_scheme():
     print SCHEME
@@ -136,19 +146,23 @@ def get_config():
         # parse the config XML
         doc = xml.dom.minidom.parseString(config_str)
         root = doc.documentElement
-        server_host = str(root.getElementsByTagName("server_host")[0].firstChild.data)
+        server_host = str(root.getElementsByTagName(
+            "server_host")[0].firstChild.data)
         if server_host:
             logger.debug("XML: Found server_host")
             config["server_host"] = server_host
-        server_uri = str(root.getElementsByTagName("server_uri")[0].firstChild.data)
+        server_uri = str(root.getElementsByTagName(
+            "server_uri")[0].firstChild.data)
         if server_uri:
             logger.debug("XML: Found server_uri")
             config["server_uri"] = server_uri
-        session_key = str(root.getElementsByTagName("session_key")[0].firstChild.data)
+        session_key = str(root.getElementsByTagName(
+            "session_key")[0].firstChild.data)
         if session_key:
             logger.debug("XML: Found session_key")
             config["session_key"] = session_key
-        checkpoint_dir = str(root.getElementsByTagName("checkpoint_dir")[0].firstChild.data)
+        checkpoint_dir = str(root.getElementsByTagName(
+            "checkpoint_dir")[0].firstChild.data)
         if checkpoint_dir:
             logger.debug("XML: Found checkpoint_dir")
             config["checkpoint_dir"] = checkpoint_dir
@@ -170,7 +184,8 @@ def get_config():
                            param.firstChild.nodeType == param.firstChild.TEXT_NODE:
                             data = param.firstChild.data
                             config[param_name] = data
-                            logger.debug("XML: '%s' -> '%s'" % (param_name, data))
+                            logger.debug("XML: '%s' -> '%s'" %
+                                         (param_name, data))
 
         checkpnt_node = root.getElementsByTagName("checkpoint_dir")[0]
         if checkpnt_node and checkpnt_node.firstChild and \
@@ -186,11 +201,15 @@ def get_config():
         # validate_conf(config, "secret_key")
         # validate_conf(config, "checkpoint_dir")
     except Exception, e:
-        raise Exception, "Error getting Splunk configuration via STDIN: %s" % str(e)
+        raise Exception, "Error getting Splunk configuration via STDIN: %s" % str(
+            e)
 
     return config
 
-#read XML configuration passed from splunkd, need to refactor to support single instance mode
+# read XML configuration passed from splunkd, need to refactor to support
+# single instance mode
+
+
 def get_validation_config():
     val_data = {}
 
@@ -243,38 +262,44 @@ if __name__ == '__main__':
         else:
             exefile = 'gogen_real'
             gogen_url = 'https://api.gogen.io/osx/gogen'
-        
-        gogen_path = os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'bin', exefile)
+
+        gogen_path = os.path.join(
+            os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'bin', exefile)
         if not os.path.exists(gogen_path):
             urllib.urlretrieve(gogen_url, gogen_path)
             os.chmod(gogen_path, 0755)
 
-            
-        args = [ ]
+        args = []
         args.append(gogen_path)
         args.append('-ot')
         args.append('modinput')
-        args.append('-sd')
-        args.append(os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen','gogen_assets','samples')+os.path.sep)
 
         if 'config_type' in config:
             config_type = str(config['config_type'])
         else:
-            config_type = 'local_file'
+            config_type = 'config_dir'
 
-
-        if 'config' in config:
-            args.append('-c')
-            config_file = str(config['config'])
-            if config_type == 'local_file':
-                args.append(os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen','gogen_assets','configs',config_file))
-            else:
-                args.append(config_file)
+        if config_type == 'config_dir':
+            args.append('-cd')
+            args.append(os.path.join(
+                os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'gogen_assets'))
+        else:
+            args.append('-sd')
+            args.append(os.path.join(os.environ[
+                        'SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'gogen_assets', 'samples') + os.path.sep)
+            if 'config' in config:
+                args.append('-c')
+                config_file = str(config['config'])
+                if config_type == 'local_file':
+                    args.append(os.path.join(os.environ[
+                                'SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'gogen_assets', 'configs', config_file))
+                else:
+                    args.append(config_file)
 
         if 'generator_threads' in config:
             args.append('-g')
             args.append(str(config['generator_threads']))
-            
+
         args.append('gen')
 
         if 'count' in config:
@@ -294,14 +319,13 @@ if __name__ == '__main__':
             args.append(str(config['end']))
         if 'begin' not in config and 'end' not in config and 'end_intervals' not in config:
             args.append('-r')
-        
 
         import pprint
         logger.debug('args: %s' % pprint.pformat(args))
         logger.debug('command: %s' % ' '.join(args))
 
         p = subprocess.Popen(args, cwd=os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen'),
-                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
 
         sys.stdout.write("<stream>\n")
 

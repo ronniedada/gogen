@@ -185,7 +185,7 @@ func TestSetTime(t *testing.T) {
 	c := config.NewConfig()
 	s := c.FindSampleByName("setTime")
 	gen := new(luagen)
-	testLuaGen(t, s, gen, "2001-10-20 11:59:59.000000")
+	testLuaGen(t, s, gen, "2001-10-20 11:59:59.000100")
 }
 
 func testLuaGen(t *testing.T, s *config.Sample, gen *luagen, expected string) {

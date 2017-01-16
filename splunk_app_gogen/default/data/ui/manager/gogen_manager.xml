@@ -22,15 +22,16 @@
              <view name="list"/>
              <view name="create"/>
              <view name="edit"/>
-             <key name="exampleText">Short Gogen path (coccyx/weblog for example), full file path,local file in config directory, or URL pointing to YAML or JSON config</key>
+             <key name="exampleText">Short Gogen path (coccyx/weblog for example), full file path,local file in config directory, or URL pointing to YAML or JSON config.  Leave blank to use all configs in gogen_assets.</key>
            </element>
            <element name="config_type" type="select" label="Configuration Descriptor Type">
              
           <view name="edit" />
           <view name="create" />
           <view name="list"/>
-          <key name="exampleText">The type of config defined in the Configuration Descriptor field</key>
+          <key name="exampleText">The type of config defined in the Configuration Descriptor field.  Defaults to config_dir.</key>
           <options>
+            <opt value="config_dir" label="Use gogen_assets as a config directory" />
             <opt value="local_file" label="Local File in config directory" />
             <opt value="short_path" label="Short Path ie: coccyx/weblog" />
             <opt value="url" label="URL" />
