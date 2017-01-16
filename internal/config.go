@@ -982,7 +982,7 @@ func ParseBeginEnd(s *Sample) {
 
 // SetupSplunk adds a time token if we're outputting to SplunkTime
 func (c *Config) SetupSplunk() {
-	if !c.cc.Export && c.Global.Output.OutputTemplate == "splunkhec" {
+	if !c.cc.Export && (c.Global.Output.OutputTemplate == "splunkhec" || c.Global.Output.OutputTemplate == "modinput") {
 		log.Infof("Adding _time field for Splunk")
 		for i := 0; i < len(c.Samples); i++ {
 			s := c.Samples[i]

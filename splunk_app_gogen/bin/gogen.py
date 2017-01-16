@@ -41,25 +41,25 @@ SCHEME = """<scheme>
     <use_single_instance>false</use_single_instance>
     <streaming_mode>xml</streaming_mode>
     <endpoint>
-        <args>    
+        <args>
             <arg name="name">
                 <title>GoGen input name</title>
                 <description>Name of this GoGen input</description>
             </arg>
-                
+
             <arg name="config_type">
                 <title>Configuration Descriptor Type</title>
                 <description>The type of config defined in the Configuration Descriptor field.  Defaults to config_dir.</description>
                 <required_on_edit>false</required_on_edit>
                 <required_on_create>false</required_on_create>
-            </arg>   
+            </arg>
             <arg name="config">
                 <title>Configuration Descriptor</title>
                 <description>Short Gogen path (coccyx/weblog for example), full file path,local file in config directory, or URL pointing to YAML or JSON config.  Leave blank to use all configs in gogen_assets.</description>
                 <required_on_edit>false</required_on_edit>
                 <required_on_create>false</required_on_create>
             </arg>
-            
+
             <arg name="count">
                 <title>Count</title>
                 <description>Count of events to generate every interval.  Overrides any amounts set in the Gogen config</description>
@@ -96,7 +96,7 @@ SCHEME = """<scheme>
                 <required_on_edit>false</required_on_edit>
                 <required_on_create>false</required_on_create>
             </arg>
-            
+
             </args>
     </endpoint>
 </scheme>
@@ -263,8 +263,12 @@ if __name__ == '__main__':
             exefile = 'gogen_real'
             gogen_url = 'https://api.gogen.io/osx/gogen'
 
-        gogen_path = os.path.join(
-            os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'bin', exefile)
+        # gogen_path = os.path.join(
+        # os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'bin',
+        # exefile)
+        gogen_base_path = os.path.sep.join(
+            os.path.realpath(__file__).split(os.path.sep)[0:-2])
+        gogen_path = os.path.join(gogen_base_path, 'bin', exefile)
         if not os.path.exists(gogen_path):
             urllib.urlretrieve(gogen_url, gogen_path)
             os.chmod(gogen_path, 0755)
@@ -281,18 +285,17 @@ if __name__ == '__main__':
 
         if config_type == 'config_dir':
             args.append('-cd')
-            args.append(os.path.join(
-                os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'gogen_assets'))
+            args.append(os.path.join(gogen_base_path, 'gogen_assets'))
         else:
             args.append('-sd')
-            args.append(os.path.join(os.environ[
-                        'SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'gogen_assets', 'samples') + os.path.sep)
+            args.append(os.path.join(gogen_base_path,
+                                     'gogen_assets', 'samples') + os.path.sep)
             if 'config' in config:
                 args.append('-c')
                 config_file = str(config['config'])
                 if config_type == 'local_file':
-                    args.append(os.path.join(os.environ[
-                                'SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen', 'gogen_assets', 'configs', config_file))
+                    args.append(os.path.join(
+                        gogen_base_path, 'configs', config_file))
                 else:
                     args.append(config_file)
 
@@ -317,20 +320,20 @@ if __name__ == '__main__':
         if 'end' in config:
             args.append('-e')
             args.append(str(config['end']))
-        if 'begin' not in config and 'end' not in config and 'end_intervals' not in config:
-            args.append('-r')
+        # if 'begin' not in config and 'end' not in config and 'end_intervals' not in config:
+        #     args.append('-r')
 
         import pprint
         logger.debug('args: %s' % pprint.pformat(args))
         logger.debug('command: %s' % ' '.join(args))
 
-        p = subprocess.Popen(args, cwd=os.path.join(os.environ['SPLUNK_HOME'], 'etc', 'apps', 'splunk_app_gogen'),
+        p = subprocess.Popen(args, cwd=gogen_base_path,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
 
         sys.stdout.write("<stream>\n")
 
         while True:
             data = p.stdout.readline()
-            #logger.debug("data: %s" % data)
+            # logger.debug("data: %s" % data)
             sys.stdout.write(data)
             sys.stdout.flush()
