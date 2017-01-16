@@ -64,7 +64,6 @@ func (h *httpout) Close() error {
 		if err != nil {
 			return err
 		}
-		<-h.done
 		h.closed = true
 	}
 	return nil
@@ -79,7 +78,6 @@ func (h *httpout) newPost(item *config.OutQueueItem) {
 	for k, v := range item.S.Output.Headers {
 		req.Header.Add(k, v)
 	}
-	h.done = make(chan int)
 	go func() {
 		h.resp, err = h.client.Do(req)
 		if err != nil && h.resp == nil {
@@ -94,6 +92,5 @@ func (h *httpout) newPost(item *config.OutQueueItem) {
 				log.Errorf("Error making request from sample '%s' to endpoint '%s', status '%d': %s", item.S.Name, endpoint, h.resp.StatusCode, body)
 			}
 		}
-		h.done <- 1
 	}()
 }
