@@ -1,6 +1,6 @@
 global:
   samplesDir:
-    - $GOGEN_HOME/examples/common
+    - /Users/ddallimore/Dev/gogen/examples/common
 samples:
 - name: weblog-regex
   interval: 1
