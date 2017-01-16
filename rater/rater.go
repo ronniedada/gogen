@@ -1,6 +1,7 @@
 package rater
 
 import (
+	"math"
 	"reflect"
 	"time"
 
@@ -12,14 +13,14 @@ import (
 func EventRate(s *config.Sample, now time.Time, count int) (ret int) {
 	if s.Rater == nil {
 		s.Rater = GetRater(s.RaterString)
-		log.Infof("Setting rater to type %s, for sample '%s'", reflect.TypeOf(s.Rater), s.Name)
+		log.Infof("Setting rater to %s, type %s, for sample '%s'", s.RaterString, reflect.TypeOf(s.Rater), s.Name)
 	}
 	rate := s.Rater.GetRate(now)
 	ratedCount := rate * float64(count)
 	if ratedCount < 0 {
-		ret = int(ratedCount - 0.5)
+		ret = int(math.Ceil(ratedCount - 0.5))
 	} else {
-		ret = int(ratedCount + 0.5)
+		ret = int(math.Floor(ratedCount + 0.5))
 	}
 	return ret
 }

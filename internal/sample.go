@@ -148,7 +148,7 @@ func (t Token) Replace(event *string, choice int, et time.Time, lt time.Time, no
 	e := *event
 
 	if pos1, pos2, err := t.GetReplacementOffsets(*event); err != nil {
-		return -1, nil
+		return choice, nil
 	} else {
 		replacement, choice, err := t.GenReplacement(choice, et, lt, now, randgen)
 		if err != nil {

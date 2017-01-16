@@ -38,6 +38,10 @@ func (t *Timer) NewTimer() {
 		}
 		// If we had no endtime set, then keep going in realtime mode
 		if s.EndParsed.IsZero() {
+			for s.Current.Before(time.Now()) {
+				t.genWork()
+				t.inc()
+			}
 			s.Realtime = true
 		}
 	}

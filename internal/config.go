@@ -936,6 +936,7 @@ func (c *Config) FindRater(name string) *RaterConfig {
 			return findr
 		}
 	}
+	log.Errorf("Rater '%s' not found", name)
 	return nil
 }
 
