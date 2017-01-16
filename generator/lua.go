@@ -33,6 +33,12 @@ func logdebug(L *lua.LState) int {
 	return 0
 }
 
+func loginfo(L *lua.LState) int {
+	lv := L.ToString(1)
+	log.Info(lv)
+	return 0
+}
+
 func (lg *luagen) send(L *lua.LState) int {
 	lv := L.ToTable(1)
 	events, err := lg.getEventsFromTable(lv)
@@ -206,6 +212,19 @@ func (lg *luagen) setToken(L *lua.LState) int {
 	return 0
 }
 
+func (lg *luagen) removeToken(L *lua.LState) int {
+	tokenName := L.CheckString(1)
+
+	newTokens := make([]config.Token, 0)
+	for i := 0; i < len(lg.tokens); i++ {
+		if lg.tokens[i].Name != tokenName {
+			newTokens = append(newTokens, lg.tokens[i])
+		}
+	}
+	lg.tokens = newTokens
+	return 0
+}
+
 func (lg *luagen) setTime(L *lua.LState) int {
 	item := lg.currentItem
 
@@ -213,7 +232,9 @@ func (lg *luagen) setTime(L *lua.LState) int {
 	if luaTime <= 0 {
 		L.ArgError(1, "expecting time in a floating point value since epoch in seconds.nanoseconds format")
 	}
-	t := time.Unix(int64(math.Floor(luaTime)), int64(math.Mod(luaTime, 1))*int64(time.Nanosecond))
+	sec := int64(math.Floor(luaTime))
+	nsec := int64(float64(math.Mod(luaTime, 1)) * float64(time.Second))
+	t := time.Unix(sec, nsec)
 	item.Earliest = t
 	item.Latest = t
 	item.Now = t
@@ -237,20 +258,36 @@ func (lg *luagen) replaceTokens(L *lua.LState) int {
 	var choices map[int]int
 	var ok bool
 	if top > 1 {
-		ud := L.CheckUserData(2)
-		if choices, ok = ud.Value.(map[int]int); !ok {
-			L.ArgError(2, "expecting choices map[int]int")
-			return 0
+		if L.Get(2).Type() != lua.LTNil {
+			ud := L.CheckUserData(2)
+			if choices, ok = ud.Value.(map[int]int); !ok {
+				L.ArgError(2, "expecting choices map[int]int")
+				return 0
+			}
+		} else {
+			choices = make(map[int]int)
 		}
 	} else {
 		choices = make(map[int]int)
+	}
+
+	var replaceFirst bool
+	replaceFirst = true
+	if top > 2 {
+		replaceFirst = L.ToBool(3)
+	}
+
+	// Replace any tokens submitted through setTokens
+	if len(lg.tokens) > 0 && replaceFirst {
+		throwawayChoices := make(map[int]int)
+		replaceTokens(item, &event, &throwawayChoices, lg.tokens)
 	}
 
 	// Replace configured tokens
 	replaceTokens(item, &event, &choices, item.S.Tokens)
 
 	// Replace any tokens submitted through setTokens
-	if len(lg.tokens) > 0 {
+	if len(lg.tokens) > 0 && !replaceFirst {
 		throwawayChoices := make(map[int]int)
 		replaceTokens(item, &event, &throwawayChoices, lg.tokens)
 	}
@@ -305,9 +342,11 @@ func (lg *luagen) Gen(item *config.GenQueueItem) error {
 				// Register functions
 				L.SetGlobal("sleep", L.NewFunction(sleep))
 				L.SetGlobal("debug", L.NewFunction(logdebug))
+				L.SetGlobal("info", L.NewFunction(logdebug))
 				L.SetGlobal("replaceTokens", L.NewFunction(lg.replaceTokens))
 				L.SetGlobal("send", L.NewFunction(lg.send))
 				L.SetGlobal("setToken", L.NewFunction(lg.setToken))
+				L.SetGlobal("removeToken", L.NewFunction(lg.removeToken))
 				L.SetGlobal("round", L.NewFunction(lg.round))
 				L.SetGlobal("getLine", L.NewFunction(lg.getLine))
 				L.SetGlobal("getLines", L.NewFunction(lg.getLines))
@@ -327,11 +366,11 @@ func (lg *luagen) Gen(item *config.GenQueueItem) error {
 	L.SetGlobal("earliest", lua.LNumber(float64(item.Earliest.UnixNano())/float64(time.Second)))
 	L.SetGlobal("latest", lua.LNumber(float64(item.Latest.UnixNano())/float64(time.Second)))
 	L.SetGlobal("now", lua.LNumber(float64(item.Now.UnixNano())/float64(time.Second)))
-	// L := lua.NewState()
-	// defer L.Close()
 
 	// log.Debugf("Calling DoString for %# v", s.CustomGenerator.Script)
 	var f *lua.LFunction
+
+	// Lookup to see if we have a cached copy of the compiled function
 	if _, ok := lg.code[s.Name]; !ok {
 		var err error
 		f, err = L.LoadString(s.CustomGenerator.Script)
@@ -340,8 +379,16 @@ func (lg *luagen) Gen(item *config.GenQueueItem) error {
 		}
 		lg.code[s.Name] = f
 	} else {
-		f = lg.code[s.Name]
+		f = &lua.LFunction{
+			IsG: false,
+			Env: L.Env,
+
+			Proto:     lg.code[s.Name].Proto,
+			GFunction: nil,
+			Upvalues:  make([]*lua.Upvalue, 0),
+		}
 	}
+	// Push our function onto the stack and call it with no arguments
 	L.Push(f)
 	err := L.PCall(0, lua.MultRet, nil)
 	if err != nil {
@@ -349,11 +396,5 @@ func (lg *luagen) Gen(item *config.GenQueueItem) error {
 	}
 	// log.Debugf("Script returned")
 
-	// lv := L.Get(-1)
-	// events, err := lg.getEventsFromTable(lv)
-	// if err != nil {
-	// 	return err
-	// }
-	// lg.sendevents(events)
 	return nil
 }
