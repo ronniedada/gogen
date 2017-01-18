@@ -1,0 +1,65 @@
+global:
+  output:
+    outputTemplate: inifile
+    outputter: stdout
+
+generators:
+- name: indexes.conf
+  script: |
+    header = "# Generated at $ts$"
+
+    events = { }
+    for i=0,2 do
+      line = getLine(i)
+      line["header"] = header
+      line = replaceTokens(line)
+
+      if line["maxHotSpanSecs"] ~= nil then
+        frozenTimePeriodInSecs = tonumber(line["maxHotSpanSecs"]) * 6
+        line["frozenTimePeriodInSecs"] = tostring(frozenTimePeriodInSecs)
+      end
+
+      line["homePath"] = "$SPLUNK_DB/"..line["index"].."db/db"
+      line["coldPath"] = "$SPLUNK_DB/"..line["index"].."db/colddb"
+      line["thawedPath"] = "$SPLUNK_DB/"..line["index"].."db/thaweddb"
+      table.insert(events, line)
+    end
+    send(events)
+
+samples:
+- name: inifile
+
+  generator: indexes.conf
+
+  count: 1
+  endIntervals: 1
+
+  tokens:
+    - name: ts
+      field: header
+      format: template                                         
+      type: timestamp
+      replacement: "%b/%d/%y %H:%M:%S"
+
+  lines:
+    - index: history
+      maxDataSize: 10
+    - index: summary
+    - index: _internal
+      maxDataSize: 1000
+      maxHotSpanSecs: 432000
+
+templates:
+- name: inifile
+  header: '{{ .header }}'
+  row: |
+    [{{ .index }}]
+    homePath = {{ .homePath }}
+    coldPath = {{ .coldPath }} 
+    thawedPath = {{ .thawedPath }}
+    {{ if .maxDataSize -}}
+    maxDataSize = {{ .maxDataSize }}
+    {{ end }}{{ if .maxHotSpanSecs -}}
+    maxHotSpansecs = {{ .maxHotSpanSecs }}
+    {{ end }}{{ if .frozenTimePeriodInSecs -}}
+    frozenTimePeriodInSecs = {{ .frozenTimePeriodInSecs }}{{ end }}

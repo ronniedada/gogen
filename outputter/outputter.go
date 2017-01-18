@@ -127,6 +127,10 @@ func Start(oq chan *config.OutQueueItem, oqs chan int, num int) {
 						}
 					}
 				default:
+					if !template.Exists(item.S.Output.OutputTemplate + "_row") {
+						log.Errorf("Template %s does not exist, skipping output", item.S.Output.OutputTemplate)
+						return
+					}
 					// We'll crash on empty events, but don't do that!
 					bytes += int64(getLine("header", item.S, item.Events[0], item.IO.W))
 					// log.Debugf("Out Queue Item %#v", item)

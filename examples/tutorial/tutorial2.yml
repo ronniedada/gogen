@@ -1,11 +1,52 @@
-samples:  
-- name: tutorial2
-  generator: replay
+raters:
+  - name: eventrater
+    type: config
+    options:
+      MinuteOfHour:
+        0: 1.0
+        1: 0.5
+        2: 2.0
+  - name: valrater
+    type: script
+    script: >
+        return options["multiplier"]
+    options:
+        multiplier: 2
 
-  tokens:
-  - name: ts1
-    type: epochtimestamp
-    format: regex
-    token: "(\\d+)"
-    srcField: _time
-  fromSample: results.csv
+samples:
+  - name: tutorial2
+    begin: 2012-02-09T08:00:00Z
+    end: 2012-02-09T08:03:00Z
+    interval: 60
+    count: 2
+    rater: eventrater
+
+    tokens:
+      - name: ts
+        format: template                                         
+        type: timestamp
+        replacement: "%b/%d/%y %H:%M:%S"
+      - name: linenum
+        format: template
+        type: script
+        init:
+          id: "0"
+        script: >
+          state["id"] = state["id"] + 1
+          return state["id"]
+      - name: val
+        format: template
+        type: random
+        replacement: int
+        lower: 1
+        upper: 5
+      - name: rated
+        format: template
+        type: rated
+        replacement: int
+        lower: 1
+        upper: 3
+        rater: valrater
+
+    lines:
+    - _raw: $ts$ line=$linenum$ value=$val$ rated=$rated$

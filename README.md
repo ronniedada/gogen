@@ -54,7 +54,8 @@ how Splunk defines it's metadata, but these can be any arbitary key/value pairs.
 
 ## Documentation
 
-* Learn how to [configure Gogen](README/Configure.md)
-* [Running Gogen](README/Running.md)
+
+* Learn how to [configure and run Gogen](README/Tutorial.md)
+* Look through [many more examples](README/Examples.md)
+* [Sharing configurations](README/Sharing.md) and participating in the community
 * Can't find something?  [Reference documentation](README/Reference.md)
-* [Scripting Gogen](README/Script.md) to expand it's capabilities

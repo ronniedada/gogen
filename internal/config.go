@@ -220,7 +220,8 @@ func BuildConfig(cc ConfigConfig) *Config {
 
 		// Add default templates
 		templates := []*Template{defaultCSVTemplate, defaultJSONTemplate, defaultSplunkHECTemplate, defaultRawTemplate, defaultModinputTemplate}
-		for _, t := range templates {
+		c.Templates = append(c.Templates, templates...)
+		for _, t := range c.Templates {
 			if len(t.Header) > 0 {
 				_ = template.New(t.Name+"_header", t.Header)
 			}
@@ -228,8 +229,6 @@ func BuildConfig(cc ConfigConfig) *Config {
 			if len(t.Footer) > 0 {
 				_ = template.New(t.Name+"_footer", t.Footer)
 			}
-
-			c.Templates = append(c.Templates, t)
 		}
 	}
 
@@ -244,10 +243,6 @@ func BuildConfig(cc ConfigConfig) *Config {
 				log.Errorf("Error parsing config %s: %s", innerPath, err)
 				return err
 			}
-
-			_ = template.New(t.Name+"_header", t.Row)
-			_ = template.New(t.Name+"_row", t.Row)
-			_ = template.New(t.Name+"_footer", t.Footer)
 
 			c.Templates = append(c.Templates, t)
 			return nil
