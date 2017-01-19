@@ -19,6 +19,7 @@ import (
 	log "github.com/coccyx/gogen/logger"
 	"github.com/coccyx/gogen/template"
 	"github.com/coccyx/timeparser"
+	"github.com/kr/pretty"
 	lua "github.com/yuin/gopher-lua"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -395,6 +396,11 @@ func BuildConfig(cc ConfigConfig) *Config {
 
 func (c *Config) mergeMixConfig(nc *Config, m *Mix) {
 	for i := range nc.Samples {
+		log.Debugf("Merging config for sample '%s' from mix: %# v", nc.Samples[i].Name, pretty.Formatter(m))
+		if c.FindSampleByName(nc.Samples[i].Name) != nil {
+			log.Errorf("Sample name '%s' already exists, not adding from mix", nc.Samples[i].Name)
+			continue
+		}
 		if m.Count != 0 {
 			nc.Samples[i].Count = m.Count
 		}
@@ -411,6 +417,10 @@ func (c *Config) mergeMixConfig(nc *Config, m *Mix) {
 			nc.Samples[i].EndIntervals = m.EndIntervals
 		}
 		ParseBeginEnd(nc.Samples[i])
+		if m.Realtime {
+			nc.Samples[i].EndIntervals = 0
+			nc.Samples[i].Realtime = true
+		}
 		log.Debugf("Adding Sample '%s' from mix", nc.Samples[i].Name)
 		c.Samples = append(c.Samples, nc.Samples[i])
 	}

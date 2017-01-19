@@ -1,0 +1,14 @@
+mix:
+  - sample: $GOGEN_HOME/examples/tutorial/tutorial1.yml
+    begin: now
+    realtime: true
+    count: 1
+    interval: 1
+  - sample: $GOGEN_HOME/examples/tutorial/tutorial2.yml
+    begin: now
+    realtime: true
+    count: 1
+    interval: 1
+  - sample: $GOGEN_HOME/examples/tutorial/tutorial5.yml
+    begin: now
+    realtime: true

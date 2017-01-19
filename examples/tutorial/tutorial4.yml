@@ -60,6 +60,6 @@ templates:
     {{ if .maxDataSize -}}
     maxDataSize = {{ .maxDataSize }}
     {{ end }}{{ if .maxHotSpanSecs -}}
-    maxHotSpansecs = {{ .maxHotSpanSecs }}
+    maxHotSpanSecs = {{ .maxHotSpanSecs }}
     {{ end }}{{ if .frozenTimePeriodInSecs -}}
     frozenTimePeriodInSecs = {{ .frozenTimePeriodInSecs }}{{ end }}

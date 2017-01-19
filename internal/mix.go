@@ -8,4 +8,5 @@ type Mix struct {
 	Begin        string `json:"begin,omitempty" yaml:"begin,omitempty"`
 	End          string `json:"end,omitempty" yaml:"end,omitempty"`
 	EndIntervals int    `json:"endIntervals,omitempty" yaml:"endIntervals,omitempty"`
+	Realtime     bool   `json:"realtime,omitempty" yaml:"realtime,omitempty"`
 }

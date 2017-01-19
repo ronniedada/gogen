@@ -17,7 +17,7 @@ Gogen is configured via a YAML or JSON based configuration.  Lets look at a very
         
         tokens:
         - name: ts
-          format: template                                                                                                                     
+          format: template
           type: timestamp
           replacement: "%b/%d/%y %H:%M:%S"
 
@@ -227,13 +227,148 @@ Next, lets take a look at a series of tokens, the ones prefixed with markets.  T
 
 ## Generators & Templates
 
-As I was rewriting the original Eventgen concept that was to become Gogen, I really wanted to preserve the original concept I had built into Eventgen later of expandability.  Eventgen allows users to ship custom generators in their Eventgens, so I wanted to replicate that in Gogen.  We do that through custom Lua generators, which have a rich API to allow the Lua scripts to interact with Gogen.  This allows for higher performance, as most of the work is handled in Go code, and it allows for the script developer to minimize the amount of things they need to replicate in their own code.
+As I was rewriting the original Eventgen concept that was to become Gogen, I really wanted to preserve Eventgen's ability to be expandable.  Eventgen allows users to ship custom generators in their Eventgens, so I wanted to replicate that in Gogen.  However, unlike python which is a dynamic, interpreted language, Gogen is written in Go which is a strongly typed, compiled & statically linked language.  In order to give that capability, we do that through custom Lua generators, which have a rich API to allow the Lua scripts to interact with Gogen.  This allows for higher performance, as most of the work is handled in Go code, and it allows for the script developer to minimize the amount of things they need to replicate in their own code.
 
 Secondly, I wanted the ability to customize how we output data.  Making that format expandable will future proof Gogen, and allow field expandability to model new types of data formats.  Gogen can output raw text, JSON, CSV and other formats by default, but custom templates allow for more complicated data structures.
 
 For the next example, we're going to show both of these features generating an ini-style configuration file just for giggles.
 
- 
+    global:
+      output:
+        outputTemplate: inifile
+        outputter: stdout
+
+    generators:
+    - name: indexes.conf
+      script: |
+        header = "# Generated at $ts$"
+
+        events = { }
+        for i=0,2 do
+          line = getLine(i)
+          line["header"] = header
+          line = replaceTokens(line)
+
+          if line["maxHotSpanSecs"] ~= nil then
+            frozenTimePeriodInSecs = tonumber(line["maxHotSpanSecs"]) * 6
+            line["frozenTimePeriodInSecs"] = tostring(frozenTimePeriodInSecs)
+          end
+
+          line["homePath"] = "$SPLUNK_DB/"..line["index"].."db/db"
+          line["coldPath"] = "$SPLUNK_DB/"..line["index"].."db/colddb"
+          line["thawedPath"] = "$SPLUNK_DB/"..line["index"].."db/thaweddb"
+          table.insert(events, line)
+        end
+        send(events)
+
+    samples:
+    - name: inifile
+
+      generator: indexes.conf
+
+      count: 1
+      endIntervals: 1
+
+      tokens:
+        - name: ts
+          field: header
+          format: template                                         
+          type: timestamp
+          replacement: "%b/%d/%y %H:%M:%S"
+
+      lines:
+        - index: history
+          maxDataSize: 10
+        - index: summary
+        - index: _internal
+          maxDataSize: 1000
+          maxHotSpanSecs: 432000
+
+    templates:
+    - name: inifile
+      header: '{{ .header }}'
+      row: |
+        [{{ .index }}]
+        homePath = {{ .homePath }}
+        coldPath = {{ .coldPath }} 
+        thawedPath = {{ .thawedPath }}
+        {{ if .maxDataSize -}}
+        maxDataSize = {{ .maxDataSize }}
+        {{ end }}{{ if .maxHotSpanSecs -}}
+        maxHotSpanSecs = {{ .maxHotSpanSecs }}
+        {{ end }}{{ if .frozenTimePeriodInSecs -}}
+        frozenTimePeriodInSecs = {{ .frozenTimePeriodInSecs }}{{ end }}
+
+Let's go ahead and run this to get a look at the output:
+
+    gogen -c examples/tutorial/tutorial4.yml
+
+As you can see, it does indeed look like an ini file configuration.  It's modeled after Splunk's indexes.conf.  Once again, we're introducing several important new concepts.  The first, is our `global` section, which we described earlier but it's the first time we've seen it.  Here, global sets the outputTemplate which we're defining below.  
+
+Next, let's look at the `generator` stanza.  This aligns also with the `generator` directive in the sample stanza.  We define here one generator, named indexes.conf, and we're using the `script` directive to define the script inline in the yaml, but we optionally could have pointed to a file with the `fileName` directive.  This defines a relatively simple lua script, which we'll walk through in more detail.
+
+We define a string named `header` which has a template variable in it.  This value will be present in every row, primarily to handle a data model where all the data sent to the template engine needs to be in a map[string]string.  In the future, we might enhance templates with a concept of global variables.  We then declare a for loop to loop 3 times.  We call `getLine`, which returns back a table (map[string]string equivalent) of one of our lines defined in the sample.  Lines are numbered starting from 0.  We call `replaceTokens` which calls back into Gogen's token replacement engine and substitutes any tokens we find in that line.   Next we define a few more new entries in the line dynamically with some string concatenation and then insert it into our events table.  Lastly, after the loop, we call `send` which sends our complete table to the outputter.
+
+If you want to see what just the data looks like, without the template, it's easy to run:
+
+    gogen -c examples/tutorial/tutorial4.yml -ot csv
+
+Now, let's look at the templates section.  We define here a new template, called `inifile`, which uses [Go's template library](https://golang.org/pkg/text/template/).  It should be pretty obvious to see what we're doing, if you've used any templating system in the past.  A given line is passed to the templating engine, and each item in the map is available as a variable in the template, as you can see from the example.
+
+## Replay
+
+Sometimes you just want to walk through a set of data as it was originally created.  Maybe you've found a log file that you just want to replay like it's happening right now, or you have some data in another system that is already structured and you want to be able to walk through it.  In this example, I've exported a search from Splunk's \_internal logs and I'm going to replay them like it's right now.
+
+    samples:  
+    - name: tutorial5
+      generator: replay
+
+      tokens:
+      - name: ts1
+        type: timestamp
+        format: regex
+        token: (\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2})
+        replacement: '%d/%b/%Y:%H:%M:%S'
+      fromSample: results.csv
+
+Let's go ahead and run this:
+
+    gogen -c examples/tutorial/tutorial5.yml
+
+Note, it will continue to just run.  Hit `^C` to exit Gogen.  This example pulls in the lines from a file called results.csv.  It uses the `replay` generator, and it will walk through the file looking for all the timestamps it can find matching the regex token and it will attempt to parse them using the `replacement` format.  It will look through all the lines and determine how long it should wait between each event based on the timings contained in the original file.
+
+## Mixes
+
+Much of what users of Gogen need to do is to assemble a realistic set of data to test their use case.  This is why we built the [config sharing system](README/Sharing.md).  What if someone has already published something and you want to combine it with your own or another configuration?  This is what we created mixes for.
+
+    mix:
+      - sample: $GOGEN_HOME/examples/tutorial/tutorial1.yml
+        begin: now
+        realtime: true
+        count: 1
+        interval: 1
+      - sample: $GOGEN_HOME/examples/tutorial/tutorial2.yml
+        begin: now
+        realtime: true
+        count: 1
+        interval: 1
+      - sample: $GOGEN_HOME/examples/tutorial/tutorial5.yml
+        begin: now
+        realtime: true
+
+This last of our tutorial files should be pretty simple to grok.  We're referencing 3 of our other tutorial files and we're combining them into a mix.  We're overriding a few attributes of the original samples, and setting them all to generate in real time since before several of them were fixed time windows.  If you run this:
+
+    gogen -c examples/tutorial/tutorial6.yml
+
+You'll see they generate in real time.  End generation with another `^C`.
+
+## Config Done!
+
+You're now a functional expert, assuming you've read this far, in Gogen configuration.  Make sure to check out [more examples](README/Examples.md) where we list a number of examples developed by [myself](http://github.com/coccyx) and the community.
+
+# Using Gogen
+
+
 
 TODO:
 * Single JSON Document using templates

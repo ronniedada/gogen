@@ -14,6 +14,10 @@ func PrimeRater(s *config.Sample) {
 			if t.RaterString != "" && t.Rater == nil {
 				log.Infof("Setting rater to %s for token '%s'", t.RaterString, t.Name)
 				s.Tokens[i].Rater = rater.GetRater(t.RaterString)
+				if s.Tokens[i].Rater == nil {
+					log.Errorf("Rater %s not found, disabling sample %s", t.RaterString, s.Name)
+					s.Disabled = true
+				}
 			}
 		}
 	}
